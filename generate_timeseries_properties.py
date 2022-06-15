@@ -121,7 +121,7 @@ with gw.open(sorted(glob(file_glob)), band_names=[band_name], time_names=dates) 
             band=band_name,
             na_rm=True,
             persist=True,
-            filepath=os.path.join(files, "annual_features/May_Oct"),
+            filepath=os.path.join(files, "annual_features/May_Oct_MODIS"),
             postfix="_may_oct_" + year,
         )  #'_may_sep_'+year, '_'+year
     cluster.restart()
@@ -131,40 +131,67 @@ cluster.close()
 
 # %%
 
-# open xarray lazy
-with gw.open(sorted(glob(file_glob)), band_names=[band_name], time_names=dates) as ds:
-    ds = ds.chunk({"time": -1, "band": 1, "y": 350, "x": 350})  # rechunk to time
 
-    ds.attrs["nodatavals"] = (0,)
-    print(ds)
-    # # move dates back 2 months so year ends feb 29, so month range now May = month 3, feb of following year = month 12
-    # ds = ds.assign_coords(
-    #     time=(pd.Series(ds.time.values) - pd.DateOffset(months=2)).values
-    # )
+files = "/mnt/space/Dropbox/USA_Data/MD_Crops/sentinel_images/"
+band_name = "evi"
+file_glob = f"{files}/*.tif"
+strp_glob = f"{files}S2_SR_%Y_%m.tif"
+
+
+f_list = sorted(glob(file_glob))
+
+dates = sorted(datetime.strptime(string, strp_glob) for string in f_list)
+
+
+# update band name to evi and limit lag
+complete_f["doy_of_maximum_first"] = [{"band": band_name}]
+complete_f["doy_of_maximum_last"] = [{"band": band_name}]
+complete_f["doy_of_minimum_last"] = [{"band": band_name}]
+complete_f["doy_of_minimum_first"] = [{"band": band_name}]
+complete_f["autocorr"] = [{"lag": 1}, {"lag": 2}, {"lag": 4}]
+
+
+#%%
+
+# start cluster
+cluster = Cluster()
+cluster.start_large_object()
+
+# open xarray lazy
+with gw.open(sorted(glob(file_glob)), time_names=dates, stack_dim="time") as ds:
+
+    ds.attrs["nodatavals"] = (
+        0,
+        0,
+        0,
+        0,
+    )
+    # print(ds)
+    evi = ds.gw.evi(sensor="bgrn", scale_factor=1)
+    evi = evi.chunk({"time": -1, "band": 1, "y": 350, "x": 350})  # rechunk to time
 
     # # generate features
     for year in sorted(list(set([x.year for x in dates]))):
         year = str(year)
-        print(year)
-    #     ds_year = ds.sel(
-    #         time=slice(year + "-03-01", year + "-07-29")
-    #     )  # full '-03-01' to -12-29'  year+'-03-01', year+'-07-29'
-    #     print("interpolating")
-    #     ds_year = ds_year.interpolate_na(dim="time", limit=5)
-    #     ds_year = ds_year.chunk(
-    #         {"time": -1, "band": 1, "y": 350, "x": 350}
-    #     )  # rechunk to time
+        ds_year = evi.sel(time=slice(year + "-03-01", year + "-07-29"))
+        print("interpolating")
+        ds_year = ds_year.interpolate_na(dim="time", limit=5)
+        ds_year = ds_year.chunk(
+            {"time": -1, "band": 1, "y": 350, "x": 350}
+        )  # rechunk to time
 
-    #     # extract growing season year month day
-    #     features = extract_features(
-    #         xr_data=ds_year,
-    #         feature_dict=complete_f,
-    #         band=band_name,
-    #         na_rm=True,
-    #         persist=True,
-    #         filepath=os.path.join(files, "Meher_features/May_Sep"),
-    #         postfix="_may_sep_" + year,
-    #     )  #'_may_sep_'+year, '_'+year
-    # cluster.restart()
+        # extract growing season year month day
+        features = extract_features(
+            xr_data=ds_year,
+            feature_dict=complete_f,
+            band=band_name,
+            na_rm=True,
+            persist=True,
+            filepath=os.path.join(files, "annual_features/May_Sep_S2"),
+            postfix="_may_sep_" + year,
+        )
+    cluster.restart()
 
 cluster.close()
+
+# %%
