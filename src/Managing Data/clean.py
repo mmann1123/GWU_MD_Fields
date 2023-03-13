@@ -9,8 +9,7 @@ raw_dir = "./data/raw"
 csv_dir = "./data/processed/csv"
 
 # Defines columns that are necessary and/or significant
-critical = ['Longitude', 'Latitude', 'Field', 'Product', 'Date',
-	'Elevation(ft)', 'Yld Mass(Dry)(lb/ac)']
+critical = ['Longitude', 'Latitude', 'Field', 'Product', 'Date']
 
 # Defines columns to sort output CSVs by
 sort_by = ['Year', 'Field', 'Product']
