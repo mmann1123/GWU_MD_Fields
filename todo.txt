@@ -1,0 +1,11 @@
+- look into relative paths (git rev-parse --show-toplevel)
+- write up a README for setting up env and raw data
+- find api for weather/rainfall/sunlight
+- make time series for all with ts-fresh
+- incorporate satellite data download and timeseries creation
+- break down cv groups by year
+- recategorize seed code products by species
+- make distribution for hyperparams rather than discrete values
+- clean up imports
+- use glob
+- check edge of field issues
